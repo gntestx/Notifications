@@ -1,103 +1,87 @@
 # Notifications
 
-En .NET 10 Blazor WebAssembly-PWA med MudBlazor och ett Azure-inspirerat `MudTheme`. Klienten publiceras på GitHub Pages. Ett ASP.NET Core-API i Azure App Service lagrar prenumerationer i Azure Table Storage och skickar krypterade Web Push-meddelanden med VAPID.
-
-## Funktioner
-
-- Aktivera och stäng av pushnotiser från PWA:n.
-- Ta emot notiser när appen inte är öppen.
-- Skicka rubrik, text och valfri länk till alla aktiva prenumeranter.
-- Automatisk borttagning av utgångna prenumerationer (`404`/`410`).
-- Offline-cache, installationsmanifest och ikoner för PWA.
-- Validering, CORS, rate limiting och konstanttidsjämförelse av administratörsnyckeln.
-- GitHub Actions för CI, GitHub Pages och Azure App Service.
-- Bicep-mall för App Service, Linux-plan, Storage Account och Table Storage.
+En .NET 10 Blazor Web App med Interactive WebAssembly, MudBlazor, mörkblått tema och stöd för att skicka och ta emot Web Push-notiser. Hela lösningen körs i Azure Web App. Prenumerationer sparas beständigt i Azure Table Storage.
 
 ## Arkitektur
 
-```mermaid
-flowchart LR
-    PWA[Blazor PWA<br/>GitHub Pages] -->|prenumerera/skicka| API[ASP.NET Core API<br/>Azure App Service]
-    API --> TABLE[Azure Table Storage]
-    API -->|Web Push + VAPID| PUSH[Webbläsarens push-tjänst]
-    PUSH --> PWA
-```
+- `Notifications` – ASP.NET Core-värd, push-API och Azure Table Storage.
+- `Notifications.Client` – interaktivt WebAssembly-gränssnitt och JavaScript-interoperabilitet med Push API.
+- `Notifications.Shared` – kontrakt som delas av klient och server.
+- `Notifications.KeyGenerator` – skapar VAPID-nyckelpar och en säker sändningsnyckel.
+- `infra/main.bicep` – App Service-plan, Web App, Storage Account och appinställningar.
 
-GitHub Pages kan bara servera statiska filer. Därför måste sändning och lagring ligga i Azure; VAPID-privatnyckeln får aldrig finnas i WASM-klienten.
+Sändning kräver headern `X-Notifications-Key`. Nyckeln skrivs in i gränssnittet, hålls bara i minnet och sparas inte i webbläsaren.
 
-## Lokal körning
+## Kör lokalt
 
-Krav: .NET 10 SDK och Node.js (`npx` används bara för att skapa nycklar).
+Du behöver .NET 10 SDK och, om prenumerationerna ska överleva omstarter, Azurite eller ett Azure Storage-konto.
 
-1. Skapa VAPID-nycklar:
+1. Skapa nycklar:
 
    ```bash
-   npx web-push generate-vapid-keys
+   dotnet run --project tools/Notifications.KeyGenerator
    ```
 
-2. Lägg hemligheterna i API-projektets User Secrets:
+2. Skapa `src/Notifications/appsettings.Local.json`:
+
+   ```json
+   {
+     "Storage": {
+       "ConnectionString": "UseDevelopmentStorage=true"
+     },
+     "Push": {
+       "VapidPublicKey": "PUBLIC_KEY",
+       "VapidPrivateKey": "PRIVATE_KEY",
+       "Subject": "mailto:you@example.com",
+       "AdminKey": "ADMIN_KEY"
+     }
+   }
+   ```
+
+3. Starta appen. `appsettings.Local.json` läses automatiskt men checkas inte in. Du kan även sätta motsvarande miljövariabler:
 
    ```bash
-   dotnet user-secrets set "Push:Subject" "mailto:din-adress@example.com" --project src/Notifications.Api
-   dotnet user-secrets set "Push:PublicKey" "DIN_PUBLIC_KEY" --project src/Notifications.Api
-   dotnet user-secrets set "Push:PrivateKey" "DIN_PRIVATE_KEY" --project src/Notifications.Api
-   dotnet user-secrets set "AdminKey" "EN_LANG_SLUMPMASSIG_NYCKEL" --project src/Notifications.Api
+   export Storage__ConnectionString='UseDevelopmentStorage=true'
+   export Push__VapidPublicKey='PUBLIC_KEY'
+   export Push__VapidPrivateKey='PRIVATE_KEY'
+   export Push__Subject='mailto:you@example.com'
+   export Push__AdminKey='ADMIN_KEY'
+   dotnet run --project src/Notifications
    ```
 
-3. Starta API och klient i var sitt terminalfönster:
-
-   ```bash
-   dotnet run --project src/Notifications.Api
-   dotnet run --project src/Notifications.Client
-   ```
-
-Utan `Storage:TableConnectionString` använder lokal utveckling ett minneslager. För beständig lokal lagring kan anslutningssträngen peka på Azurite.
+Utan `Storage__ConnectionString` används minneslagring lokalt. HTTPS krävs för Web Push, med undantag för browserns säkra `localhost`-kontext.
 
 ## Skapa Azure-resurser
 
-Välj ett globalt unikt appnamn. GitHub Pages-origin ska sakna avslutande snedstreck.
+Kopiera exempelparametrarna till en fil som inte checkas in och fyll i värdena från nyckelgeneratorn:
 
 ```bash
-az login
+cp infra/main.bicepparam.example infra/main.bicepparam
 az group create --name notifications-rg --location swedencentral
 az deployment group create \
   --resource-group notifications-rg \
   --template-file infra/main.bicep \
-  --parameters \
-    appName=DITT_UNIKA_APPNAMN \
-    adminKey='EN_LANG_SLUMPMASSIG_NYCKEL' \
-    vapidPublicKey='DIN_PUBLIC_KEY' \
-    vapidPrivateKey='DIN_PRIVATE_KEY' \
-    vapidSubject='mailto:din-adress@example.com' \
-    clientOrigin='https://gntestx.github.io'
+  --parameters infra/main.bicepparam
 ```
 
-Kommandot skriver ut API-adressen. Testa sedan `https://DITT_UNIKA_APPNAMN.azurewebsites.net/health`.
+Bicep-mallen använder en Linux B1 App Service-plan och konfigurerar .NET 10, HTTPS, TLS 1.2 och en privat Storage-anslutning via appinställning.
 
-## Koppla GitHub Actions
+## Automatisk driftsättning
 
-I repositoryt `gntestx/Notifications`:
+I GitHub-repots environment `production` skapar du:
 
-1. Lägg till repository-variabeln `API_BASE_URL`, till exempel `https://DITT_UNIKA_APPNAMN.azurewebsites.net/`.
-2. Lägg till repository-variabeln `AZURE_WEBAPP_NAME` med App Service-namnet.
-3. Konfigurera Azure Deployment Center för GitHub Actions med **OpenID Connect**. Lägg därefter in secrets `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` och `AZURE_SUBSCRIPTION_ID` om Deployment Center inte gjorde det.
-4. Under **Settings → Pages**, välj **GitHub Actions** som källa. Workflow-filen försöker också aktivera Pages automatiskt.
-5. Kör workflow `Deploy API to Azure App Service`, därefter `Deploy PWA to GitHub Pages`.
+- Variable `AZURE_WEBAPP_NAME` – namnet som Bicep-kommandot returnerar.
+- Secret `AZURE_WEBAPP_PUBLISH_PROFILE` – XML-filen från **Azure Portal → Web App → Download publish profile**.
 
-PWA-adressen blir `https://gntestx.github.io/Notifications/`.
+Efter merge till `main` bygger och driftsätter `deploy-azure.yml` appen. `ci.yml` bygger även varje pull request.
 
 ## iPhone och iPad
 
-Web Push på iOS/iPadOS kräver att webbappen först läggs till på hemskärmen. Öppna sedan den installerade appen och tryck **Aktivera notiser**. Behörighetsfrågan måste utlösas av användarens knapptryckning. Testa med en fysisk enhet; vanlig Safari-flik och simulator ger inte samma beteende.
+På iOS/iPadOS måste webbappen först installeras via **Dela → Lägg till på hemskärmen**. Öppna sedan den installerade appen och tryck **Aktivera notiser**. Web Push fungerar inte från en vanlig Safari-flik på iPhone.
 
-## Säkerhet före skarp användning
+## Säkerhet och drift
 
-Administratörsnyckeln skrivs in per utskick och sparas inte av appen. Det är tillräckligt för en liten intern app, men för en publik produktionstjänst bör utskicks-API:t skyddas med Microsoft Entra ID eller annan riktig inloggning. Begränsa även Azure-loggar så att request headers inte lagras och rotera både admin- och VAPID-nycklar vid misstänkt läckage.
-
-## Test
-
-```bash
-dotnet restore Notifications.slnx
-dotnet build Notifications.slnx --configuration Release --no-restore
-dotnet test tests/Notifications.Api.Tests/Notifications.Api.Tests.csproj --configuration Release --no-build
-```
+- VAPID private key och sändningsnyckeln ska endast finnas i Azure App Settings/GitHub Secrets.
+- Sändnings-endpointen har fast-tidsjämförelse av nyckeln och begränsas till fem anrop per minut och instans.
+- Utgångna push-prenumerationer tas automatiskt bort när push-tjänsten svarar med `404` eller `410`.
+- Byt `Push__AdminKey` i Azure om sändningsnyckeln har röjts.

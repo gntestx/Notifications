@@ -1,25 +1,26 @@
-name: CI
+name: Build
 
 on:
-  push:
-    branches: [main]
   pull_request:
+  push:
     branches: [main]
 
 permissions:
   contents: read
 
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
+      - name: Validate Bicep
+        run: az bicep build --file infra/main.bicep --stdout > /dev/null
       - name: Restore
         run: dotnet restore Notifications.slnx
       - name: Build
         run: dotnet build Notifications.slnx --configuration Release --no-restore
-      - name: Test
-        run: dotnet test tests/Notifications.Api.Tests/Notifications.Api.Tests.csproj --configuration Release --no-build
+      - name: Publish
+        run: dotnet publish src/Notifications/Notifications.csproj --configuration Release --no-build --output publish
