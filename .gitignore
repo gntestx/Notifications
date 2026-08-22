@@ -1,9 +1,9 @@
-bin/
-obj/
+**/bin/
+**/obj/
 .vs/
 .idea/
+.DS_Store
+publish/
 *.user
 *.suo
-appsettings.Local.json
-publish/
-infra/main.bicepparam
+local.settings.json
