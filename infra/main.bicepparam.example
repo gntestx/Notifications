@@ -1,0 +1,8 @@
+using './main.bicep'
+
+param appName = 'choose-a-globally-unique-name'
+param vapidPublicKey = '<generated-public-key>'
+param vapidPrivateKey = '<generated-private-key>'
+param adminKey = '<generated-admin-key>'
+param vapidSubject = 'mailto:admin@example.com'
+
