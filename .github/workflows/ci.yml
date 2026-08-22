@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore Notifications.slnx
+      - name: Build
+        run: dotnet build Notifications.slnx --configuration Release --no-restore
+      - name: Test
+        run: dotnet test tests/Notifications.Api.Tests/Notifications.Api.Tests.csproj --configuration Release --no-build
+      - name: Publish PWA
+        run: dotnet publish src/Notifications.Client/Notifications.Client.csproj --configuration Release --no-build --output publish-client

@@ -1,0 +1,222 @@
+@page "/"
+@inject PushNotificationService PushService
+@inject ISnackbar Snackbar
+
+<PageTitle>Notifications</PageTitle>
+
+<section class="hero">
+    <div class="hero-icon" aria-hidden="true">
+        <MudIcon Icon="@Icons.Material.Filled.NotificationsActive" Size="Size.Large" />
+    </div>
+    <div>
+        <MudText HtmlTag="h1" Typo="Typo.h3" Class="hero-title">Notifikationer som når fram</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="hero-copy">
+            Installera appen och få pushnotiser även när den inte är öppen.
+        </MudText>
+    </div>
+</section>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-6" />
+}
+else
+{
+    <MudGrid Spacing="3" Class="mt-3">
+        <MudItem xs="12" md="6">
+            <MudPaper Class="feature-card" Elevation="0">
+                <MudStack Spacing="3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.h5">Ta emot</MudText>
+                        <MudChip T="string" Color="@StateColor" Variant="Variant.Filled" Icon="@StateIcon">
+                            @StateLabel
+                        </MudChip>
+                    </MudStack>
+
+                    <MudText Typo="Typo.body2">
+                        Webbläsaren frågar om lov först när du trycker på knappen.
+                        På iPhone behöver appen vara tillagd på hemskärmen.
+                    </MudText>
+
+                    @if (!_state.IsSupported)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                            Den här webbläsaren stöder inte Web Push i detta läge.
+                        </MudAlert>
+                    }
+                    else if (_state.Permission == "denied")
+                    {
+                        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                            Notiser är blockerade. Ändra behörigheten i webbläsarens eller telefonens inställningar.
+                        </MudAlert>
+                    }
+
+                    <MudButton Variant="Variant.Filled"
+                               Color="@(_state.IsSubscribed ? Color.Error : Color.Primary)"
+                               StartIcon="@(_state.IsSubscribed ? Icons.Material.Filled.NotificationsOff : Icons.Material.Filled.NotificationsActive)"
+                               Disabled="@(!_state.IsSupported || _busy)"
+                               OnClick="ToggleSubscriptionAsync"
+                               Size="Size.Large"
+                               FullWidth="true">
+                        @(_state.IsSubscribed ? "Stäng av notiser" : "Aktivera notiser")
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudPaper Class="feature-card" Elevation="0">
+                <MudForm @ref="_form">
+                    <MudStack Spacing="2">
+                        <MudStack Row="true" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h5">Skicka</MudText>
+                            <MudSpacer />
+                            <MudIcon Icon="@Icons.Material.Filled.Send" Color="Color.Primary" />
+                        </MudStack>
+
+                        <MudTextField @bind-Value="_title"
+                                      Label="Rubrik"
+                                      Variant="Variant.Outlined"
+                                      MaxLength="80"
+                                      Required="true"
+                                      RequiredError="Ange en rubrik" />
+
+                        <MudTextField @bind-Value="_body"
+                                      Label="Meddelande"
+                                      Variant="Variant.Outlined"
+                                      Lines="3"
+                                      MaxLength="240"
+                                      Required="true"
+                                      RequiredError="Ange ett meddelande" />
+
+                        <MudTextField @bind-Value="_url"
+                                      Label="Länk (valfri)"
+                                      Variant="Variant.Outlined"
+                                      Placeholder="/ eller https://…" />
+
+                        <MudTextField @bind-Value="_adminKey"
+                                      Label="Administratörsnyckel"
+                                      Variant="Variant.Outlined"
+                                      InputType="InputType.Password"
+                                      Required="true"
+                                      RequiredError="Ange administratörsnyckeln" />
+
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Send"
+                                   Disabled="_busy"
+                                   OnClick="SendAsync"
+                                   Size="Size.Large"
+                                   FullWidth="true">
+                            Skicka till alla
+                        </MudButton>
+                    </MudStack>
+                </MudForm>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+<MudText Typo="Typo.caption" Align="Align.Center" Class="privacy-note">
+    Prenumerationsnycklar lagras i Azure. Administratörsnyckeln sparas inte i webbläsaren.
+</MudText>
+
+@code {
+    private SubscriptionState _state = new(false, "default", false);
+    private MudForm? _form;
+    private bool _loading = true;
+    private bool _busy;
+    private string _title = "Ett nytt meddelande";
+    private string _body = string.Empty;
+    private string? _url = "/";
+    private string _adminKey = string.Empty;
+
+    private Color StateColor => _state.IsSubscribed ? Color.Success : Color.Default;
+    private string StateIcon => _state.IsSubscribed
+        ? Icons.Material.Filled.CheckCircle
+        : Icons.Material.Filled.NotificationsNone;
+    private string StateLabel => _state.IsSubscribed ? "Aktiv" : "Inte aktiv";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            _state = await PushService.GetStateAsync();
+        }
+        catch (Exception exception)
+        {
+            Snackbar.Add(exception.Message, Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleSubscriptionAsync()
+    {
+        _busy = true;
+        try
+        {
+            if (_state.IsSubscribed)
+            {
+                await PushService.UnsubscribeAsync();
+                Snackbar.Add("Notiser är avstängda.", Severity.Info);
+            }
+            else
+            {
+                await PushService.SubscribeAsync();
+                Snackbar.Add("Notiser är aktiverade.", Severity.Success);
+            }
+
+            _state = await PushService.GetStateAsync();
+        }
+        catch (Exception exception)
+        {
+            Snackbar.Add(exception.Message, Severity.Error);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task SendAsync()
+    {
+        if (_form is null)
+        {
+            return;
+        }
+
+        await _form.ValidateAsync();
+        if (!_form.IsValid)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var result = await PushService.SendAsync(
+                new NotificationRequest(_title.Trim(), _body.Trim(), _url?.Trim()),
+                _adminKey);
+            Snackbar.Add(
+                $"Levererat: {result.Delivered}, misslyckat: {result.Failed}, borttaget: {result.Removed}.",
+                result.Failed == 0 ? Severity.Success : Severity.Warning);
+        }
+        catch (Exception exception)
+        {
+            Snackbar.Add(exception.Message, Severity.Error);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}
