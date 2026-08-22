@@ -1,15 +1,16 @@
-name: Build
+name: CI
 
 on:
-  pull_request:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -20,6 +21,5 @@ jobs:
         run: dotnet restore Notifications.slnx
       - name: Build
         run: dotnet build Notifications.slnx --configuration Release --no-restore
-      - name: Publish
-        run: dotnet publish src/Notifications/Notifications.csproj --configuration Release --no-build --output publish
-
+      - name: Test
+        run: dotnet test tests/Notifications.Api.Tests/Notifications.Api.Tests.csproj --configuration Release --no-build
