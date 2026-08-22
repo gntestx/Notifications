@@ -165,7 +165,7 @@ static Dictionary<string, string[]> ValidateNotification(NotificationRequest not
     {
         notification.Url = "/";
     }
-    else if (!notification.Url.StartsWith('/', StringComparison.Ordinal) || notification.Url.StartsWith("//", StringComparison.Ordinal))
+    else if (!notification.Url.StartsWith("/", StringComparison.Ordinal) || notification.Url.StartsWith("//", StringComparison.Ordinal))
     {
         errors[nameof(notification.Url)] = ["Länken måste vara en relativ sökväg som börjar med ett enkelt /. "];
     }
