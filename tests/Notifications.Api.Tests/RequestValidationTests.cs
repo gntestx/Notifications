@@ -1,5 +1,6 @@
 using Notifications.Api.Services;
 using Notifications.Shared;
+using Xunit;
 
 namespace Notifications.Api.Tests;
 
