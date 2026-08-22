@@ -1,0 +1,17 @@
+<Router AppAssembly="typeof(Program).Assembly"
+        AdditionalAssemblies="new[] { typeof(Notifications.Client._Imports).Assembly }">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="typeof(Notifications.Client.Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="typeof(Notifications.Client.Layout.MainLayout)">
+            <MudPaper Class="feature-card" Elevation="0">
+                <MudText Typo="Typo.h4">Sidan finns inte</MudText>
+                <MudText Typo="Typo.body1">Adressen leder inte till någon sida i appen.</MudText>
+                <MudButton Href="/" Color="Color.Primary" Variant="Variant.Filled">Till startsidan</MudButton>
+            </MudPaper>
+        </LayoutView>
+    </NotFound>
+</Router>
+
