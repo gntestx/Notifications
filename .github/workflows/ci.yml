@@ -23,3 +23,5 @@ jobs:
         run: dotnet build Notifications.slnx --configuration Release --no-restore
       - name: Test
         run: dotnet test tests/Notifications.Api.Tests/Notifications.Api.Tests.csproj --configuration Release --no-build
+      - name: Publish PWA
+        run: dotnet publish src/Notifications.Client/Notifications.Client.csproj --configuration Release --no-build --output publish-client
