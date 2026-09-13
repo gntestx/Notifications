@@ -1,0 +1,50 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="Theme" IsDarkMode="true" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="0" Class="app-bar">
+        <div class="brand-mark">N</div>
+        <MudText Typo="Typo.h6" Class="brand-title">Notifications</MudText>
+        <MudSpacer />
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">PWA</MudChip>
+    </MudAppBar>
+
+    <MudMainContent>
+        <main class="app-shell">
+            @Body
+        </main>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private static readonly MudTheme Theme = new()
+    {
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#4D8DFF",
+            PrimaryDarken = "#2F6DD5",
+            Secondary = "#61D9F5",
+            Background = "#07111F",
+            Surface = "#0D1B2E",
+            AppbarBackground = "#081525",
+            DrawerBackground = "#0A1728",
+            TextPrimary = "#F3F7FF",
+            TextSecondary = "#AABBD2",
+            ActionDefault = "#C6D6EA",
+            Divider = "#1C3452",
+            Success = "#43D19E",
+            Warning = "#FFBE55",
+            Error = "#FF6B7A",
+            Info = "#61D9F5"
+        },
+        LayoutProperties = new LayoutProperties
+        {
+            DefaultBorderRadius = "14px"
+        }
+    };
+}
+
