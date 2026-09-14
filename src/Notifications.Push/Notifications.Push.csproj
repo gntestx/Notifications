@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Azure.Data.Tables" />
+    <PackageReference Include="WebPush" />
+    <ProjectReference Include="../Notifications.Shared/Notifications.Shared.csproj" />
+  </ItemGroup>
+</Project>

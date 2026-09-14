@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using Notifications.Shared;
 
-namespace Notifications.Services;
+namespace Notifications.Push;
 
 public sealed class InMemoryPushSubscriptionStore : IPushSubscriptionStore
 {
@@ -31,4 +31,3 @@ public sealed class InMemoryPushSubscriptionStore : IPushSubscriptionStore
         await Task.CompletedTask;
     }
 }
-

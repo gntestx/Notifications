@@ -1,11 +1,11 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Notifications.Options;
 using Notifications.Shared;
 using WebPush;
 
-namespace Notifications.Services;
+namespace Notifications.Push;
 
 public sealed class PushNotificationSender(
     IPushSubscriptionStore store,
@@ -64,4 +64,3 @@ public sealed class PushNotificationSender(
         return new SendNotificationResult(sent, removed, failed);
     }
 }
-
