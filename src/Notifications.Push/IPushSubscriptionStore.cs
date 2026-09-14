@@ -1,6 +1,6 @@
 using Notifications.Shared;
 
-namespace Notifications.Services;
+namespace Notifications.Push;
 
 public interface IPushSubscriptionStore
 {
@@ -8,4 +8,3 @@ public interface IPushSubscriptionStore
     Task DeleteAsync(string endpoint, CancellationToken cancellationToken);
     IAsyncEnumerable<PushSubscriptionDto> GetAllAsync(CancellationToken cancellationToken);
 }
-

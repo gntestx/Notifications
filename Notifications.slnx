@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="src/Notifications/Notifications.csproj" />
   <Project Path="src/Notifications.Client/Notifications.Client.csproj" />
+  <Project Path="src/Notifications.Push/Notifications.Push.csproj" />
   <Project Path="src/Notifications.Shared/Notifications.Shared.csproj" />
   <Project Path="tools/Notifications.KeyGenerator/Notifications.KeyGenerator.csproj" />
 </Solution>

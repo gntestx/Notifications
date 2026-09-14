@@ -5,8 +5,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.RateLimiting;
 using MudBlazor.Services;
 using Notifications.Components;
-using Notifications.Options;
-using Notifications.Services;
+using Notifications.Client.Services;
+using Notifications.Push;
 using Notifications.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +16,10 @@ builder.Services
     .AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 builder.Services.AddMudServices();
+builder.Services.AddHttpClient<PushNotificationClient>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost");
+});
 builder.Services.AddOptions<PushOptions>()
     .Bind(builder.Configuration.GetSection(PushOptions.SectionName));
 builder.Services.AddSingleton<IPushSubscriptionStore>(serviceProvider =>
@@ -78,7 +82,7 @@ pushApi.MapPost("/subscriptions", async Task<Results<NoContent, ValidationProble
 });
 
 pushApi.MapDelete("/subscriptions", async Task<Results<NoContent, ValidationProblem>> (
-    PushSubscriptionDto subscription,
+    [Microsoft.AspNetCore.Mvc.FromBody] PushSubscriptionDto subscription,
     IPushSubscriptionStore store,
     CancellationToken cancellationToken) =>
 {

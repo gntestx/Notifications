@@ -1,10 +1,12 @@
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using Azure;
 using Azure.Data.Tables;
+using Microsoft.Extensions.Logging;
 using Notifications.Shared;
 
-namespace Notifications.Services;
+namespace Notifications.Push;
 
 public sealed class AzureTablePushSubscriptionStore : IPushSubscriptionStore
 {
@@ -42,7 +44,7 @@ public sealed class AzureTablePushSubscriptionStore : IPushSubscriptionStore
         {
             await _tableClient.DeleteEntityAsync(PartitionKey, RowKeyFor(endpoint), ETag.All, cancellationToken);
         }
-        catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status404NotFound)
+        catch (RequestFailedException exception) when (exception.Status == (int)HttpStatusCode.NotFound)
         {
             _logger.LogDebug("Prenumerationen fanns redan inte kvar.");
         }
@@ -98,4 +100,3 @@ public sealed class AzureTablePushSubscriptionStore : IPushSubscriptionStore
         public string Auth { get; set; } = string.Empty;
     }
 }
-

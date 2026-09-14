@@ -1,4 +1,4 @@
-namespace Notifications.Options;
+namespace Notifications.Push;
 
 public sealed class PushOptions
 {
@@ -9,4 +9,3 @@ public sealed class PushOptions
     public string Subject { get; set; } = string.Empty;
     public string AdminKey { get; set; } = string.Empty;
 }
-
